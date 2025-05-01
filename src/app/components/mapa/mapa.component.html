@@ -1,0 +1,21 @@
+<ion-content fullscreen>
+  <!-- Botones -->
+  <div class="control-panel mt-3">
+    <button (click)="seleccionarTipo('peligro')" title="Zona peligrosa">
+      <img src="../../../assets/icon/peligro.jpg" alt="Peligro" />
+    </button>
+    <button (click)="seleccionarTipo('ruta')" title="Ruta en mal estado">
+      <img src="../../../assets/icon/ruta.jpg" alt="Ruta" />
+    </button>
+  </div>
+
+  <div class="posicion-btn">
+    <ion-button (click)="centrarEnMiUbicacion()" title="Mi ubicación">
+      <ion-icon slot="start" name="pin-outline"></ion-icon>
+      Mi ubicación
+    </ion-button>
+  </div>
+
+  <!-- Mapa -->
+  <div id="map"></div>
+</ion-content>
