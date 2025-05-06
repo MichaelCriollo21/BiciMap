@@ -16,6 +16,11 @@
     </ion-button>
   </div>
 
+  <div class="posicion-btn margin-center" style="margin-right: 163px;">
+    <input type="text" [(ngModel)]="destino" placeholder="Destino" />
+    <button (click)="trazarRuta()">Ir en bici</button>
+  </div>
+
   <!-- Mapa -->
   <div id="map"></div>
 </ion-content>

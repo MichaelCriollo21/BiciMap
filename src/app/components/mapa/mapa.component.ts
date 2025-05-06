@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import * as L from 'leaflet';
 
@@ -21,11 +22,15 @@ export class MapaComponent implements OnInit {
   map!: L.Map;
   tipoSeleccionado: TipoMarcador | null = null;
   rutas: Ruta[] = [];
+  destino: string = '';
+  apiKey = '5b3ce3597851110001cf62482aa84af9836343798848b1e56c1d4ee8';
+  rutaLayer: L.GeoJSON | null = null;
 
-  // Íconos personalizados
+  constructor(private http: HttpClient) {}
+
   iconos: Record<TipoMarcador, L.Icon> = {
     peligro: L.icon({
-      iconUrl: '../../../assets/icon/peligro.jpg', // Asegúrate de tener este ícono en assets/icons/
+      iconUrl: '../../../assets/icon/peligro.jpg',
       iconSize: [32, 32],
       iconAnchor: [16, 32],
       popupAnchor: [0, -32],
@@ -43,13 +48,11 @@ export class MapaComponent implements OnInit {
   }
 
   initMap(): void {
-    this.map = L.map('map').setView([4.711, -74.072], 13); // Bogotá
-
+    this.map = L.map('map').setView([4.711, -74.072], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'Map data © OpenStreetMap contributors'
     }).addTo(this.map);
 
-    // Evento al hacer clic en el mapa
     this.map.on('click', (e: L.LeafletMouseEvent) => {
       if (this.tipoSeleccionado) {
         const nuevaRuta: Ruta = {
@@ -70,11 +73,11 @@ export class MapaComponent implements OnInit {
           Fecha: ${nuevaRuta.fecha.toLocaleString()}
         `);
 
-        // Resetear selección después de colocar marcador
         this.tipoSeleccionado = null;
       }
     });
   }
+
 
   seleccionarTipo(tipo: TipoMarcador): void {
     this.tipoSeleccionado = tipo;
@@ -101,5 +104,61 @@ export class MapaComponent implements OnInit {
         console.error(error);
       }
     );
+  }
+
+  async trazarRuta(): Promise<void> {
+    if (!navigator.geolocation || !this.destino) {
+      alert('Ubicación actual o destino no válido.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const start = [pos.coords.longitude, pos.coords.latitude];
+
+      // 1. Geocodificar destino
+      const nominatimURL = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.destino)}`;
+      const resultado: any = await this.http.get(nominatimURL).toPromise();
+      if (!resultado || resultado.length === 0) {
+        alert('No se encontró la dirección.');
+        return;
+      }
+
+      const end = [parseFloat(resultado[0].lon), parseFloat(resultado[0].lat)];
+
+      // 2. Llamar a OpenRouteService
+      const body = {
+        coordinates: [start, end],
+        profile: 'cycling-regular',
+        format: 'geojson'
+      };
+
+      const headers = {
+        Authorization: this.apiKey,
+        'Content-Type': 'application/json'
+      };
+
+      try {
+        const response: any = await this.http.post(
+          'https://api.openrouteservice.org/v2/directions/cycling-regular/geojson',
+          body,
+          { headers }
+        ).toPromise();
+
+        // 3. Dibujar en el mapa
+        if (this.rutaLayer) {
+          this.map.removeLayer(this.rutaLayer);
+        }
+
+        this.rutaLayer = L.geoJSON(response).addTo(this.map);
+        this.map.fitBounds(this.rutaLayer.getBounds());
+
+      } catch (error) {
+        alert('Error al calcular la ruta');
+        console.error(error);
+      }
+
+    }, (err) => {
+      alert('No se pudo obtener tu ubicación.');
+    });
   }
 }
